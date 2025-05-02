@@ -1,29 +1,168 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Snake & Mouse</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake Game</title>
+  <style>
+    body {
+      margin: 0;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+
+    #startMessage {
+      position: absolute;
+      color: #ccc;
+      font-size: 1.5rem;
+      animation: fadeCycle 18s ease-in-out infinite;
+    }
+
+    @keyframes fadeCycle {
+      0% { opacity: 0; }
+      22.22% { opacity: 1; }
+      77.78% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    #game {
+      display: none;
+      display: grid;
+      grid-template-columns: repeat(40, 16px);
+      grid-template-rows: repeat(40, 16px);
+      gap: 1px;
+    }
+
+    .cell {
+      width: 16px;
+      height: 16px;
+      background-color: #222;
+    }
+
+    .snake {
+      background-color: limegreen;
+    }
+
+    .food {
+      background-color: lightgray;
+    }
+  </style>
 </head>
 <body>
-  <h1>Press any arrow key</h1>
+  <div id="startMessage">Press an arrow key</div>
+  <div id="game"></div>
 
   <script>
-    document.addEventListener('keyup', function(event) {
-      switch (event.key) {
-        case 'ArrowUp':
-          alert('Up');
+    const gridSize = 40;
+    const gameEl = document.getElementById('game');
+    const startMessage = document.getElementById('startMessage');
+    const cells = [];
+    let snake = [{ x: 20, y: 20 }];
+    let dir = { x: 1, y: 0 };
+    let food = null;
+    let intervalId = null;
+    let gameStarted = false;
+
+    // Initialize grid
+    function createGrid() {
+      for (let y = 0; y < gridSize; y++) {
+        for (let x = 0; x < gridSize; x++) {
+          const cell = document.createElement('div');
+          cell.classList.add('cell');
+          gameEl.appendChild(cell);
+          cells.push(cell);
+        }
+      }
+    }
+
+    // Convert x/y to 1D index
+    function getIndex(x, y) {
+      return y * gridSize + x;
+    }
+
+    // Render snake and food
+    function render() {
+      cells.forEach(cell => {
+        cell.classList.remove('snake', 'food');
+      });
+      snake.forEach(seg => {
+        const index = getIndex(seg.x, seg.y);
+        if (cells[index]) cells[index].classList.add('snake');
+      });
+      if (food) {
+        const index = getIndex(food.x, food.y);
+        cells[index].classList.add('food');
+      }
+    }
+
+    // Place food randomly
+    function placeFood() {
+      while (true) {
+        const x = Math.floor(Math.random() * gridSize);
+        const y = Math.floor(Math.random() * gridSize);
+        if (!snake.some(seg => seg.x === x && seg.y === y)) {
+          food = { x, y };
           break;
-        case 'ArrowDown':
-          alert('Down');
-          break;
-        case 'ArrowLeft':
-          alert('Left');
-          break;
-        case 'ArrowRight':
-          alert('Right');
-          break;
-        default:
-          // Do nothing for other keys
-          break;
+        }
+      }
+    }
+
+    // Game step
+    function step() {
+      const head = { x: snake[0].x + dir.x, y: snake[0].y + dir.y };
+
+      // Check wall or self collision
+      if (
+        head.x < 0 || head.x >= gridSize ||
+        head.y < 0 || head.y >= gridSize ||
+        snake.some(seg => seg.x === head.x && seg.y === head.y)
+      ) {
+        clearInterval(intervalId);
+        alert('Game Over!');
+        return;
+      }
+
+      snake.unshift(head);
+
+      if (food && head.x === food.x && head.y === food.y) {
+        placeFood(); // Eat and grow
+      } else {
+        snake.pop(); // Move forward
+      }
+
+      render();
+    }
+
+    // Key handling
+    document.addEventListener('keydown', (e) => {
+      if (!gameStarted && e.key.startsWith('Arrow')) {
+        gameStarted = true;
+        startMessage.style.display = 'none';
+        gameEl.style.display = 'grid';
+        createGrid();
+        placeFood();
+        render();
+        intervalId = setInterval(step, 150);
+      }
+
+      const newDir = {
+        ArrowUp:    { x: 0, y: -1 },
+        ArrowDown:  { x: 0, y: 1 },
+        ArrowLeft:  { x: -1, y: 0 },
+        ArrowRight: { x: 1, y: 0 },
+      }[e.key];
+
+      if (newDir) {
+        // Prevent reversing direction
+        if (snake.length < 2 ||
+            snake[0].x + newDir.x !== snake[1].x ||
+            snake[0].y + newDir.y !== snake[1].y) {
+          dir = newDir;
+        }
       }
     });
   </script>
